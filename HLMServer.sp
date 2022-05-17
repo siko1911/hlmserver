@@ -1,6 +1,7 @@
 #include <sourcemod>
 #include <cstrike>
-#include <multicolors>
+//#include <multicolors>
+#include <colorvariables>
 #include <sdktools_sound>
 
 #pragma semicolon 1
@@ -46,7 +47,7 @@ public void OnClientPutInServer(int client)
 	char uid[32];
 	GetClientName(client, name, sizeof(name));
 	GetClientAuthId(client, AuthId_Steam3, uid, sizeof(uid));
-	CPrintToChatAll("{red}[HLM服务器消息]{lime}欢迎%s[%s]进入游戏！祝您玩的愉快！", name, uid);
+	CPrintToChatAll("{darkred}[HLM服务器消息]{lime}欢迎{pink}%s[%s]{lime}进入游戏！祝您玩的愉快！", name, uid);
 
 	//当用户进入服务器时，播放声音并绑定按键
 
