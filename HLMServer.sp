@@ -19,6 +19,17 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	RegConsoleCmd("sm_nav", Cmd_nav, ""); //注册!nav命令
+	RegConsoleCmd("sm_hud", Cmd_hud, ""); //测试HUD消息
+	RegConsoleCmd("sm_txt", Cmd_txt, ""); //测试消息
+
+	HookEvent("player_death", player_death); //检测玩家死亡事件
+	HookEvent("bomb_dropped", bomb_dropped); //检测C4扔掉
+	HookEvent("bomb_pickup", bomb_pickup);   //检测C4捡起
+	HookEvent("bomb_beginplant", bomb_bplant); //检测C4开始安装
+	HookEvent("bomb_begindefuse", bomb_bdefuse); //检测C4开始被拆除
+	HookEvent("grenade_thrown", grenade_thrown); //检测扔雷
+
+	
 
 }
 
@@ -27,7 +38,12 @@ public bool OnClientConnect(int client)
 	//当用户连接服务器时，给出提示
 	char name[32];
 	GetClientName(client, name, sizeof(name));
-	CPrintToChatAll("{red}[HLM服务器消息]{lime}-%s-正在连接服务器...", name);
+	CPrintToChatAll("{darkred}[HLM服务器消息]{lime}-%s-正在连接服务器...", name);
+
+	PrecacheSound("hlm/cnm.wav");
+	PrecacheSound("hlm/die.mp3");
+	PrecacheSound("hlm/nhs.wav");
+	PrecacheSound("go.mp3");
 	
 	return true;
 }
@@ -37,7 +53,7 @@ public void OnClientConnected(int client)
 	//当用户连接服务器成功时，给出提示
 	char name[32];
 	GetClientName(client, name, sizeof(name));
-	CPrintToChatAll("{red}[HLM服务器消息]{lime}-%s-连接服务器成功！", name);
+	CPrintToChatAll("{darkred}[HLM服务器消息]{lime}-%s-连接服务器成功！", name);
 }
 
 public void OnClientPutInServer(int client)
@@ -47,16 +63,18 @@ public void OnClientPutInServer(int client)
 	char uid[32];
 	GetClientName(client, name, sizeof(name));
 	GetClientAuthId(client, AuthId_Steam3, uid, sizeof(uid));
-	CPrintToChatAll("{darkred}[HLM服务器消息]{lime}欢迎{pink}%s[%s]{lime}进入游戏！祝您玩的愉快！", name, uid);
+	CPrintToChatAll("{darkred}[HLM服务器消息]{lime}欢迎{orchid}%s[%s]{lime}进入游戏！祝您玩的愉快！", name, uid);
+}
 
-	//当用户进入服务器时，播放声音并绑定按键
+public void OnClientPostAdminCheck(int client)
+{
+	//当用户完全进入服务器时，播放声音
 
 	for (int i = 1; i < MaxClients ; i++)
 	{
 		if (IsClientInGame(i) && IsClientConnected(i))
 		{
-			ClientCommand(i, "play *go.mp3"); //播放声音
-			FakeClientCommandEx(i, "bind F3 \"say !nav\""); //绑定按键
+			ClientCommand(i, "play go.mp3"); //播放声音
 
 			//HUD消息提示，测试功能
 			SetHudTextParams(-1.0, 0.2, 10.0, 0, 0, 255, 100, 2, 6.0, 1.0, 2.0);
@@ -64,8 +82,6 @@ public void OnClientPutInServer(int client)
 
 		}
 	}
-
-	
 }
 
 public Action Cmd_nav(int client, int args)
@@ -115,3 +131,137 @@ public int MenuCallback(Menu nav_menu, MenuAction action, int client, int option
 	
 	return 1;
 }
+
+
+public Action Cmd_hud(int client, int args)
+{
+	SetHudTextParamsEx(0.1, 0.6, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
+	ShowHudText(client, -1, "测试HUD消息！！！");
+}
+
+public Action Cmd_txt(int client, int args)
+{
+	CPrintToChatAll("{lightred}曹{blue}达{lightgreen}华{purple}牛{gold}逼{green}！");
+	CPrintToChatAll("{pink}哈哈哈哈哈");
+}
+
+public void player_death(Event event, const char[] name, bool dontBroadcast)
+{
+	char weapon[64];
+	char aname[32];
+	event.GetString("weapon", weapon, sizeof(weapon));
+	int attackerID = event.GetInt("attacker");
+	int attacker = GetClientOfUserId(attackerID);
+	int victimID = event.GetInt("userid");
+	int victim = GetClientOfUserId(victimID);
+	GetClientName(attacker, aname, sizeof(aname));
+	bool headshot = event.GetBool("headshot");
+	int att_health = GetClientHealth(attacker);
+
+	if (headshot)
+	{
+		SetHudTextParamsEx(0.1, 0.6, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
+		ShowHudText(victim, -1, "你被【%s】=爆头=击杀！\n击杀你的武器是：%s\n剩余血量：%d\n喊你队友来弄死他快！", aname, weapon, att_health);
+	} else
+	{
+		SetHudTextParamsEx(0.1, 0.6, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
+		ShowHudText(victim, -1, "你被【%s】击杀！\n击杀你的武器是：%s\n剩余血量：%d\n喊你队友来弄死他快！", aname, weapon, att_health);
+	}
+
+	float ang[3];
+	GetClientAbsAngles(victim, ang);
+	EmitAmbientSound("hlm/die.mp3", ang, victim);
+
+	//EmitSoundToClient(victim, "hlm/die.mp3");
+	//FakeClientCommand(victim, "play go.mp3");
+}
+
+public void bomb_dropped(Event event, const char[] name, bool dontBroadcast)
+{
+	char dname[32];
+	int uid = event.GetInt("userid");
+	GetClientName(GetClientOfUserId(uid), dname, sizeof(dname));
+	for (int i = 1; i < MaxClients; i++)
+	{
+		if (IsClientInGame(i) && IsClientConnected(i))
+		{
+			SetHudTextParamsEx(0.5, 0.6, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
+			ShowHudText(i, -1, "【%s】丢掉了C4炸弹！！！", dname);
+		}
+	}
+}
+
+public void bomb_pickup(Event event, const char[] name, bool dontBroadcast)
+{
+	char pname[32];
+	int uid = event.GetInt("userid");
+	GetClientName(GetClientOfUserId(uid), pname, sizeof(pname));
+	for (int i = 1; i < MaxClients; i++)
+	{
+		if (IsClientInGame(i) && IsClientConnected(i))
+		{
+			SetHudTextParamsEx(0.5, 0.65, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
+			ShowHudText(i, -1, "【%s】捡起了C4炸弹！！！", pname);
+		}
+	}
+}
+
+public void bomb_bplant(Event event, const char[] name, bool dontBroadcast)
+{
+	char bname[32];
+	int uid = event.GetInt("userid");
+	GetClientName(GetClientOfUserId(uid), bname, sizeof(bname));
+	for (int i = 1; i < MaxClients; i++)
+	{
+		if (IsClientInGame(i) && IsClientConnected(i))
+		{
+			SetHudTextParamsEx(0.5, 0.7, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
+			ShowHudText(i, -1, "【%s】正在安装C4炸弹！！！", bname);
+		}
+	}
+}
+
+public void bomb_bdefuse(Event event, const char[] name, bool dontBroadcast)
+{
+	char bname[32];
+	int uid = event.GetInt("userid");
+	bool kit = event.GetBool("haskit");
+	GetClientName(GetClientOfUserId(uid), bname, sizeof(bname));
+	for (int i = 1; i < MaxClients; i++)
+	{
+		if (IsClientInGame(i) && IsClientConnected(i))
+		{
+			if(kit)
+			{
+				SetHudTextParamsEx(0.3, 0.75, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
+				ShowHudText(i, -1, "【%s】正在拆除C4炸弹！！！\n我靠他有钳子，快快快快！！！", bname);
+			} else 
+			{
+				SetHudTextParamsEx(0.3, 0.75, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
+				ShowHudText(i, -1, "【%s】正在拆除C4炸弹！！！\n他没得钳子，快去干他！！！", bname);
+			}
+		}
+	}
+}
+
+public void grenade_thrown(Event event, const char[] name, bool dontBroadcast)
+{
+	char gname[32];
+	int uid;
+	int cid;
+	uid = event.GetInt("userid");
+	cid = GetClientOfUserId(uid);
+	event.GetString("weapon", gname, sizeof(gname));
+
+	float ang[3];
+	GetClientAbsAngles(cid, ang);
+	//EmitSoundToClient(cid, "hlm/cnm.wav");
+	EmitAmbientSound("hlm/cnm.wav", ang, cid);
+	if (StrEqual(gname, "hegrenade"))
+	{
+		PrintHintText(cid, "丢雷丢雷丢雷");
+	}
+	
+
+}
+
