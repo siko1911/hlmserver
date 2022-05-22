@@ -1,7 +1,7 @@
 #include <sourcemod>
 #include <cstrike>
-//#include <multicolors>
-#include <colorvariables>
+#include <multicolors>
+//#include <colorvariables>
 #include <sdktools_sound>
 
 #pragma semicolon 1
@@ -15,7 +15,6 @@ public Plugin myinfo =
 	version = "1.0",
 	url = "HLM.NET"
 };
-
 public void OnPluginStart()
 {
 	RegConsoleCmd("sm_nav", Cmd_nav, ""); //注册!nav命令
@@ -28,6 +27,8 @@ public void OnPluginStart()
 	HookEvent("bomb_beginplant", bomb_bplant); //检测C4开始安装
 	HookEvent("bomb_begindefuse", bomb_bdefuse); //检测C4开始被拆除
 	HookEvent("grenade_thrown", grenade_thrown); //检测扔雷
+
+	CreateTimer(30.0, ADMSG, _, TIMER_REPEAT);
 
 	
 
@@ -43,7 +44,7 @@ public bool OnClientConnect(int client)
 	PrecacheSound("hlm/cnm.wav");
 	PrecacheSound("hlm/die.mp3");
 	PrecacheSound("hlm/nhs.wav");
-	PrecacheSound("go.mp3");
+	PrecacheSound("hlm/go.mp3");
 	
 	return true;
 }
@@ -74,14 +75,30 @@ public void OnClientPostAdminCheck(int client)
 	{
 		if (IsClientInGame(i) && IsClientConnected(i))
 		{
-			ClientCommand(i, "play go.mp3"); //播放声音
+			ClientCommand(i, "play hlm/go.mp3"); //播放声音
 
 			//HUD消息提示，测试功能
-			SetHudTextParams(-1.0, 0.2, 10.0, 0, 0, 255, 100, 2, 6.0, 1.0, 2.0);
-			ShowHudText(i, -1, "欢迎加入红浪漫会所，祝您玩的愉快！");
+			SetHudTextParams(-1.0, 0.2, 10.0, 255, 0, 255, 100, 1, 6.0, 1.0, 2.0);
+			Handle hud = CreateHudSynchronizer();
+			ShowSyncHudText(i, hud, "欢迎加入红浪漫会所，祝您玩的愉快！");
+			//ShowHudText(i, -1, "");
 
 		}
 	}
+
+	CPrintToChat(client, "{lightred}======================[HLM]服务器帮助======================");
+	CPrintToChat(client, "{olive}● 输入{orchid}!nav{olive}打开聚合导航菜单");
+	CPrintToChat(client, "{olive}● 可以打开控制台输入{darkred}[bind F2 \"say !nav\"]{olive}来绑定F2或者其他按键");
+	CPrintToChat(client, "{olive}● 服务器已更新{purple}[2022安特卫普Major系列贴纸]");
+}
+
+public Action ADMSG(Handle Timer)
+{
+	CPrintToChatAll("{lightred}======================[HLM]服务器帮助======================");
+	CPrintToChatAll("{olive}● 输入{orchid}!nav{olive}打开聚合导航菜单");
+	CPrintToChatAll("{olive}● 可以打开控制台输入{darkred}[bind F2 \"say !nav\"]{olive}来绑定F2或者其他按键");
+	CPrintToChatAll("{olive}● 服务器已更新{purple}[2022安特卫普Major系列贴纸]");
+	return Plugin_Continue;
 }
 
 public Action Cmd_nav(int client, int args)
@@ -135,14 +152,27 @@ public int MenuCallback(Menu nav_menu, MenuAction action, int client, int option
 
 public Action Cmd_hud(int client, int args)
 {
-	SetHudTextParamsEx(0.1, 0.6, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
-	ShowHudText(client, -1, "测试HUD消息！！！");
+	//Handle hud = CreateHudSynchronizer();
+	SetHudTextParamsEx(0.1, 0.65, 10.0, {127, 255, 212, 255}, {224, 255, 255, 10}, 2, 0.1, 0.1, 0.2);
+	ShowHudText(client, -1, "测试HUD消息1！！！");
+
+	SetHudTextParamsEx(0.1, 0.7, 10.0, {255, 0, 255, 255}, {238, 130, 238, 10}, 2, 0.1, 0.1, 0.2);
+	ShowHudText(client, -1, "测试HUD消息2！！！");
+
+	SetHudTextParamsEx(0.1, 0.75, 10.0, {225, 69, 69, 255}, {225, 69, 69, 10}, 3, 0.1, 0.1, 0.2);
+	ShowHudText(client, -1, "测试HUD消息3！！！");
+
+	SetHudTextParamsEx(0.1, 0.8, 10.0, {225, 69, 69, 255}, {225, 69, 69, 10}, 1, 0.1, 0.1, 0.2);
+	ShowHudText(client, -1, "测试HUD消息3！！！");
+	return Plugin_Handled;
 }
 
 public Action Cmd_txt(int client, int args)
 {
 	CPrintToChatAll("{lightred}曹{blue}达{lightgreen}华{purple}牛{gold}逼{green}！");
-	CPrintToChatAll("{pink}哈哈哈哈哈");
+	CPrintToChatAll("{pink 哈哈哈哈哈}");
+	ShowMOTDPanel(client, "TEST", "TESTMSG", MOTDPANEL_TYPE_TEXT);
+	return Plugin_Handled;
 }
 
 public void player_death(Event event, const char[] name, bool dontBroadcast)
@@ -160,12 +190,14 @@ public void player_death(Event event, const char[] name, bool dontBroadcast)
 
 	if (headshot)
 	{
-		SetHudTextParamsEx(0.1, 0.6, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
-		ShowHudText(victim, -1, "你被【%s】=爆头=击杀！\n击杀你的武器是：%s\n剩余血量：%d\n喊你队友来弄死他快！", aname, weapon, att_health);
+		Handle hud = CreateHudSynchronizer();
+		SetHudTextParamsEx(0.2, 0.69, 5.0, {225, 69, 69, 255}, {225, 69, 69, 10}, 1, 0.1, 0.1, 0.2);
+		ShowSyncHudText(victim, hud, "你被【%s】=爆头=击杀！\n击杀你的武器是：%s\n剩余血量：%d\n喊你队友来弄死他快！", aname, weapon, att_health);
 	} else
 	{
-		SetHudTextParamsEx(0.1, 0.6, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
-		ShowHudText(victim, -1, "你被【%s】击杀！\n击杀你的武器是：%s\n剩余血量：%d\n喊你队友来弄死他快！", aname, weapon, att_health);
+		Handle hud = CreateHudSynchronizer();
+		SetHudTextParamsEx(0.2, 0.69, 5.0, {225, 69, 69, 255}, {225, 69, 69, 10}, 1, 0.1, 0.1, 0.2);
+		ShowSyncHudText(victim, hud, "你被【%s】击杀！\n击杀你的武器是：%s\n剩余血量：%d\n喊你队友来弄死他快！", aname, weapon, att_health);
 	}
 
 	float ang[3];
@@ -185,8 +217,10 @@ public void bomb_dropped(Event event, const char[] name, bool dontBroadcast)
 	{
 		if (IsClientInGame(i) && IsClientConnected(i))
 		{
-			SetHudTextParamsEx(0.5, 0.6, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
-			ShowHudText(i, -1, "【%s】丢掉了C4炸弹！！！", dname);
+			Handle hud = CreateHudSynchronizer();
+			SetHudTextParamsEx(-1.0, 0.6, 3.0, {225, 69, 69, 255}, {225, 69, 69, 10}, 1, 0.1, 0.1, 0.2);
+			ShowSyncHudText(i, hud, "【%s】丢掉了C4炸弹！！！", dname);
+			//ShowHudText(i, -1, "【%s】丢掉了C4炸弹！！！", dname);
 		}
 	}
 }
@@ -200,8 +234,9 @@ public void bomb_pickup(Event event, const char[] name, bool dontBroadcast)
 	{
 		if (IsClientInGame(i) && IsClientConnected(i))
 		{
-			SetHudTextParamsEx(0.5, 0.65, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
-			ShowHudText(i, -1, "【%s】捡起了C4炸弹！！！", pname);
+			Handle hud = CreateHudSynchronizer();
+			SetHudTextParamsEx(-1.0, 0.65, 3.0, {225, 69, 69, 255}, {225, 69, 69, 10}, 1, 0.1, 0.1, 0.2);
+			ShowSyncHudText(i, hud, "【%s】捡起了C4炸弹！！！", pname);
 		}
 	}
 }
@@ -215,8 +250,9 @@ public void bomb_bplant(Event event, const char[] name, bool dontBroadcast)
 	{
 		if (IsClientInGame(i) && IsClientConnected(i))
 		{
-			SetHudTextParamsEx(0.5, 0.7, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
-			ShowHudText(i, -1, "【%s】正在安装C4炸弹！！！", bname);
+			Handle hud = CreateHudSynchronizer();
+			SetHudTextParamsEx(-1.0, 0.69, 3.0, {225, 69, 69, 255}, {225, 69, 69, 10}, 1, 0.1, 0.1, 0.2);
+			ShowSyncHudText(i, hud, "【%s】正在安装C4炸弹！！！", bname);
 		}
 	}
 }
@@ -231,14 +267,18 @@ public void bomb_bdefuse(Event event, const char[] name, bool dontBroadcast)
 	{
 		if (IsClientInGame(i) && IsClientConnected(i))
 		{
+			Handle hud = CreateHudSynchronizer();
 			if(kit)
 			{
-				SetHudTextParamsEx(0.3, 0.75, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
-				ShowHudText(i, -1, "【%s】正在拆除C4炸弹！！！\n我靠他有钳子，快快快快！！！", bname);
+				//Handle hud = CreateHudSynchronizer();
+				SetHudTextParamsEx(-1.0, 0.7, 3.0, {225, 69, 69, 255}, {225, 69, 69, 10}, 1, 0.1, 0.1, 0.2);
+				ShowSyncHudText(i, hud, "【%s】正在拆除C4炸弹！！！\n我靠他有钳子，快快快快！！！", bname);
+			
 			} else 
 			{
-				SetHudTextParamsEx(0.3, 0.75, 10.0, {255, 192, 103, 255}, {255, 0, 0, 255}, 2, 0.5, 0.1, 0.2);
-				ShowHudText(i, -1, "【%s】正在拆除C4炸弹！！！\n他没得钳子，快去干他！！！", bname);
+				//Handle hud = CreateHudSynchronizer();
+				SetHudTextParamsEx(-1.0, 0.75, 3.0, {225, 69, 69, 255}, {225, 69, 69, 10}, 1, 0.1, 0.1, 0.2);
+				ShowSyncHudText(i, hud, "【%s】正在拆除C4炸弹！！！\n他没得钳子，快去干他！！！", bname);
 			}
 		}
 	}
@@ -257,10 +297,10 @@ public void grenade_thrown(Event event, const char[] name, bool dontBroadcast)
 	GetClientAbsAngles(cid, ang);
 	//EmitSoundToClient(cid, "hlm/cnm.wav");
 	EmitAmbientSound("hlm/cnm.wav", ang, cid);
-	if (StrEqual(gname, "hegrenade"))
-	{
-		PrintHintText(cid, "丢雷丢雷丢雷");
-	}
+	// if (StrEqual(gname, "hegrenade"))
+	// {
+	// 	PrintHintText(cid, "丢雷丢雷丢雷");
+	// }
 	
 
 }
